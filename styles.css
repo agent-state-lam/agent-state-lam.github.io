@@ -216,6 +216,21 @@ a:hover {
   margin: 0 8px;
 }
 
+/* author names link to their homepages: text colour, faint underline, accent colour on hover */
+.hero-authors a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.hero-authors a:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
 .hero-authors sup,
 .hero-affiliations sup {
   font-size: 0.72em;
