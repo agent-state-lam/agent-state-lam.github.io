@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent-State LAM · Learning Agent States for Latent Action Modeling</title>
+  <meta name="description" content="Learning Agent States for Latent Action Modeling. Agent-State LAM jointly learns a compact agent-state representation and latent actions, guided by spatially matched temporal discrimination (SMTD).">
+  <meta property="og:title" content="Learning Agent States for Latent Action Modeling">
+  <meta property="og:description" content="Agent-State LAM jointly learns a compact agent-state representation and latent actions, guided by spatially matched temporal discrimination (SMTD).">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
+
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+
+  <!-- Sticky Navigation -->
+  <header class="navbar">
+    <div class="navbar-inner">
+      <a class="brand" href="#top">
+        <span class="brand-dot" aria-hidden="true"></span>
+        Agent-State LAM
+      </a>
+      <nav class="nav-links" aria-label="Section navigation">
+        <a href="#video">Video</a>
+        <a href="#problem">Problem</a>
+        <a href="#method">Method</a>
+        <a href="#world-model">World Models</a>
+        <a href="#benchmarks">Results</a>
+        <a href="#retrieval">Pose Retrieval</a>
+        <a href="#citation">BibTeX</a>
+      </nav>
+      <div class="nav-ctas">
+        <a class="nav-cta" href="https://github.com/Mid-Push/Agent-State-LAM" target="_blank" rel="noopener noreferrer">Code &rarr;</a>
+        <a class="nav-cta is-hf" href="https://huggingface.co/Shaoan/Agent-State-LAM" target="_blank" rel="noopener noreferrer">Checkpoints &rarr;</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="container">
+        <div class="hero-header">
+          <h1 class="hero-title">Learning Agent States for Latent Action Modeling</h1>
+          <p class="hero-authors">
+            <span>Shaoan Xie<sup>1</sup></span>
+            <span>Fan Feng<sup>2</sup></span>
+            <span>Peiyuan Zhu<sup>3</sup></span>
+            <span>Peter Spirtes<sup>1</sup></span>
+            <span>Kun Zhang<sup>1,3</sup></span>
+          </p>
+          <p class="hero-affiliations">
+            <span><sup>1</sup>Carnegie Mellon University</span>
+            <span><sup>2</sup>University of California, San Diego</span>
+            <span><sup>3</sup>Mohamed bin Zayed University of Artificial Intelligence</span>
+          </p>
+          <p class="hero-tagline">
+            Agent-State LAM jointly learns a compact agent-state representation and latent actions that model its transitions.
+            <strong>Spatially matched temporal discrimination (SMTD)</strong> guides what the state retains, without action labels, masks, or optical-flow targets.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://arxiv.org/pdf/2611.32017" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.8423 0a1.0037 1.0037 0 0 0-.922.6078c-.1536.3687-.0438.6275.2938 1.1113l6.9185 8.3597-1.0223 1.1058a1.0393 1.0393 0 0 0 .003 1.4229l1.2292 1.3135-5.4391 6.4444c-.2803.299-.4538.823-.2971 1.1986a1.0253 1.0253 0 0 0 .9585.635.9133.9133 0 0 0 .6891-.3405l5.783-6.126 7.4902 8.0051a.8527.8527 0 0 0 .6835.2597.9575.9575 0 0 0 .8777-.6138c.1577-.377-.017-.7502-.306-1.1407l-7.0518-8.3418 1.0632-1.13a.9626.9626 0 0 0 .0089-1.3165L4.6336.4639s-.3733-.4535-.768-.463zm0 .272h.0166c.2179.0052.4874.2715.5644.3639l.005.006.0052.0055 10.169 10.9905a.6915.6915 0 0 1-.0072.945l-1.0666 1.133-1.4982-1.7724-8.5994-10.39c-.3286-.472-.352-.6183-.2592-.841a.7307.7307 0 0 1 .6704-.4401Zm14.341 1.5701a.877.877 0 0 0-.6554.2418l-5.6962 6.1584 1.6944 1.8319 5.3089-6.5138c.3251-.4335.479-.6603.3247-1.0292a1.1205 1.1205 0 0 0-.9763-.689zm-7.6557 12.2823 1.3186 1.4135-5.7864 6.1295a.6494.6494 0 0 1-.4959.26.7516.7516 0 0 1-.706-.4669c-.1119-.2682.0359-.6864.2442-.9083l.0051-.0055.0047-.0055z"/></svg>
+              Paper
+            </a>
+            <a class="btn btn-dark" href="https://github.com/Mid-Push/Agent-State-LAM" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+              Code
+            </a>
+            <a class="btn btn-hf" href="https://huggingface.co/Shaoan/Agent-State-LAM" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.4446 11.5059c0 1.1021.1673 2.1585.4847 3.1563-.0378-.0028-.0691-.0058-.1058-.0058-.4209 0-.8015.16-1.0704.4512-.3454.3737-.4984.8335-.4316 1.293a1.576 1.576 0 0 0 .2148.5978c-.2319.1864-.4018.4456-.4844.7578-.0646.2448-.131.7543.2149 1.2794a1.4552 1.4552 0 0 0-.0625.1055c-.208.3923-.2207.8372-.0371 1.25.2783.6258.9696 1.1175 2.3126 1.6467.8356.3292 1.5988.5411 1.6056.543 1.1046.2847 2.104.4277 2.969.4277 1.4173 0 2.4754-.3849 3.1525-1.1446 1.538.2651 2.791.1403 3.592.006.6773.7555 1.7332 1.1387 3.1467 1.1387.8649 0 1.8643-.143 2.969-.4278.0068-.0019.77-.2138 1.6056-.543 1.343-.5292 2.0343-1.0208 2.3126-1.6466.1836-.4129.171-.8577-.037-1.25a1.4685 1.4685 0 0 0-.0626-.1056c.346-.525.2795-1.0346.2149-1.2793-.0826-.3122-.2525-.5714-.4844-.7579.11-.1816.1831-.3788.2148-.5977.0669-.4595-.0862-.9193-.4316-1.293-.2688-.2913-.6495-.4513-1.0704-.4513-.0209 0-.0376.0008-.0588.0018.3162-.9966.4846-2.0518.4846-3.1523 0-5.807-4.7362-10.5144-10.5789-10.5144-5.8426 0-10.5788 4.7073-10.5788 10.5144Zm10.5788-9.4831c5.2727 0 9.5476 4.246 9.5476 9.483a9.4201 9.4201 0 0 1-.2696 2.2365c-.0039-.0047-.0079-.011-.0117-.0156-.274-.3255-.6679-.5059-1.1075-.5059-.352 0-.714.1155-1.0763.3438-.2403.1517-.5058.422-.7793.7598-.2534-.3492-.608-.5832-1.0137-.6465a1.5174 1.5174 0 0 0-.2344-.0176c-.9263 0-1.4828.7993-1.6935 1.5177-.1046.2426-.6065 1.3482-1.3614 2.0978-1.1681 1.1601-1.4458 2.3534-.8396 3.6382-.843.1029-1.5836.0927-2.365-.006.5906-1.212.3626-2.4388-.8426-3.6322-.755-.7496-1.2568-1.8552-1.3614-2.0978-.2107-.7184-.7673-1.5177-1.6935-1.5177-.078 0-.1568.0054-.2344.0176-.4057.0633-.7604.2973-1.0137.6465-.2735-.3379-.539-.6081-.7794-.7598-.3622-.2283-.7243-.3438-1.0762-.3438-.4266 0-.8094.171-1.0821.4786a9.4208 9.4208 0 0 1-.2598-2.1936c0-5.237 4.2749-9.483 9.5475-9.483zM8.6443 7.0036c-.4838.0043-.9503.2667-1.1934.7227-.3536.6633-.1006 1.4873.5645 1.84.351.1862.4883-.5261.836-.6485.3107-.1095.841.399 1.0078.086.3536-.6634.1025-1.4874-.5625-1.84a1.3659 1.3659 0 0 0-.6524-.1602Zm6.8403 0c-.2199-.002-.4426.05-.6504.1602-.665.3526-.9181 1.1766-.5645 1.84.1669.313.6971-.1955 1.0079-.086.3476.1224.4867.8347.838.6485.6649-.3527.916-1.1767.5624-1.84-.243-.456-.7096-.7184-1.1934-.7227Zm-9.7565 1.418a.8768.8768 0 0 0-.877.877c0 .4846.3925.877.877.877a.8768.8768 0 0 0 .877-.877.8768.8768 0 0 0-.877-.877zm12.6434 0c-.4845 0-.879.3925-.879.877 0 .4846.3945.877.879.877a.8768.8768 0 0 0 .877-.877.8768.8768 0 0 0-.877-.877zM8.7927 11.459c-.179-.003-.2793.1107-.2793.416 0 .8097.3874 2.125 1.4279 2.924.207-.7123 1.3453-1.2832 1.5079-1.2012.2315.1167.2191.4417.6074.7266.3884-.285.374-.6098.6056-.7266.1627-.082 1.3009.4889 1.5079 1.2012 1.0404-.799 1.4278-2.1144 1.4278-2.924 0-1.2212-1.583.6402-3.5413.6485-1.4686-.0061-2.7266-1.0558-3.2639-1.0645zM4.312 14.4768c.5792.365 1.6964 2.2751 2.1056 3.0177.1371.2488.371.3536.582.3536.4188 0 .7465-.4138.0391-.9395-1.0636-.791-.6914-2.0846-.1836-2.1642a.4302.4302 0 0 1 .0664-.004c.4616 0 .666.7892.666.7892s.5959 1.4898 1.6213 2.508c.942.9356 1.062 1.703.4961 2.6661-.0164-.004-.0159.0236-.1484.2149-.1853.2673-.4322.4688-.7188.6152-.5062.2269-1.1397.2696-1.7833.2696-1.037 0-2.1017-.1824-2.6975-.336-.0293-.0075-3.6505-.9567-3.1916-1.8224.0771-.1454.2033-.2031.3633-.2031.6463 0 1.823.9551 2.3283.9551.113 0 .196-.0865.2285-.2031.2249-.8045-3.2787-1.0522-2.9846-2.1642.0519-.1967.193-.2757.3907-.2754.854 0 2.7704 1.4923 3.172 1.4923.0307 0 .0525-.0085.0645-.0274.2012-.3227.1096-.5865-1.3087-1.4395-1.4182-.8533-2.4315-1.329-1.8653-1.9416.0651-.0707.1574-.1015.2695-.1015.8611.0002 2.8948 1.84 2.8948 1.84s.5487.5683.8809.5683c.0762 0 .1416-.0315.1855-.1054.2355-.3946-2.1858-2.2183-2.3224-2.971-.0926-.51.0641-.7676.3555-.7676-.0006.008.1701-.0285.4942.1759zm16.2257.5918c-.1366.7526-2.5579 2.5764-2.3224 2.9709.044.074.1092.1055.1855.1055.3321 0 .881-.5684.881-.5684s2.0336-1.8397 2.8947-1.84c.1121 0 .2044.0308.2695.1016.5662.6125-.447 1.0882-1.8653 1.9415-1.4183.853-1.51 1.1168-1.3087 1.4396.012.0188.0337.0273.0644.0273.4016 0 2.3181-1.4923 3.1721-1.4923.1977-.0002.3388.0787.3907.2754.294 1.112-3.2095 1.3597-2.9846 2.1642.0325.1166.1156.2032.2285.2032.5054 0 1.682-.9552 2.3283-.9552.16 0 .2862.0577.3633.2032.459.8656-3.1623 1.8149-3.1916 1.8224-.5958.1535-1.6605.336-2.6975.336-.6351 0-1.261-.0409-1.7638-.2599-.2949-.1472-.5488-.3516-.7383-.625-.0411-.0682-.1026-.1476-.1426-.205-.5726-.9679-.455-1.7371.4903-2.676 1.0254-1.0182 1.6212-2.508 1.6212-2.508s.2044-.7891.666-.7891a.4318.4318 0 0 1 .0665.0039c.5078.0796.88 1.3732-.1836 2.1642-.7074.5257-.3797.9395.039.9395.211 0 .445-.1047.5821-.3535.4092-.7426 1.5264-2.6527 2.1056-3.0178.5588-.3524.99-.1816.8497.5918z"/></svg>
+              Checkpoints
+            </a>
+            <a class="btn btn-outline" href="#world-model">World-Model Rollouts</a>
+            <a class="btn btn-outline" href="#benchmarks">Results</a>
+            <a class="btn btn-outline" href="#citation">BibTeX</a>
+          </div>
+        </div>
+
+        <!-- Overview video -->
+        <div id="video" class="hero-video">
+          <div class="overview-video-card">
+            <video controls playsinline preload="metadata" poster="assets/overview-poster-transfer.jpg">
+              <source src="assets/overview.mp4" type="video/mp4">
+            </video>
+            <div class="chapter-row" aria-label="Video chapters">
+              <button type="button" class="chapter-btn" data-seek="3.5">LAM primer</button>
+              <button type="button" class="chapter-btn" data-seek="13.5">Four visual factors</button>
+              <button type="button" class="chapter-btn" data-seek="32.5">Compact state</button>
+              <button type="button" class="chapter-btn" data-seek="62.5">SMTD</button>
+              <button type="button" class="chapter-btn" data-seek="102.5">Results</button>
+              <button type="button" class="chapter-btn" data-seek="116.5">World-model transfer</button>
+            </div>
+          </div>
+          <p class="hero-video-note">Two-minute overview: latent action models, the four visual factors, the compact state, SMTD and the results. Silent, with on-screen captions.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Abstract & Problem Section -->
+    <section id="problem" class="section">
+      <div class="container">
+        <div class="abstract-box">
+          <h3>Abstract</h3>
+          <p>
+            Latent action models (LAMs) learn action-like latents from unlabeled video by coupling frame-pair inference with latent-conditioned prediction, enabling policy and world-model pretraining. However, what the latent must explain depends on the representation space used for action inference and transition prediction. When this space entangles the agent's evolving physical state with visual context, such as background and persistent agent appearance, inferred latents can encode information unrelated to the agent's actions. To address this challenge, we propose <strong>Agent-State LAM</strong>, which jointly learns a compact agent-state representation and latent actions modeling its transitions. The compact state aggregates dense visual features into a shared space for both action inference and forward prediction. To guide what this state retains, we introduce <strong>spatially matched temporal discrimination (SMTD)</strong>, which trains the state to distinguish its source frame from nearby frames through spatially flexible matching with frozen local visual features. Rather than comparing global frame representations, SMTD scores each frame by emphasizing its strongest local feature matches across spatial locations. This scoring allows background and persistent agent appearance to remain matched across frames despite displacement, making these shared cues less informative for identifying the source frame and encouraging the representation to capture the agent's evolving physical state. Extensive experiments on distracting control tasks and six real robot video datasets demonstrate improved action recovery, downstream control, and world-model prediction.
+          </p>
+        </div>
+
+        <div class="section-header">
+          <span class="section-kicker">Motivation</span>
+          <h2 class="section-title">What Should a Latent Action Explain?</h2>
+          <p class="section-lead">
+            Constraining latent capacity via VQ or KL limits <em>how much</em> information a latent action encodes, not <em>which visual factors</em> it captures. When action inference and forward prediction operate on pixels or dense features that entangle the agent's state with visual context, the inferred latent can encode changes unrelated to the agent's actions.
+          </p>
+        </div>
+
+        <div class="card factor-viewer">
+          <h3 class="card-title">Four Visual Factors in One Robot Transition</h3>
+          <p class="card-subtitle">Visual features used to infer latent actions can entangle the agent's physical state <span class="fbadge f1">1</span> with visual context <span class="fbadge f2">2</span>&ndash;<span class="fbadge f4">4</span> (Figure 1). Select a factor to see it outlined in the robot clip.</p>
+
+          <div class="factor-tabs" role="tablist" aria-label="Visual factors">
+            <button type="button" class="factor-tab js-factor-tab is-active" data-factor="all">All four</button>
+            <button type="button" class="factor-tab js-factor-tab" data-factor="1">
+              <span class="fbadge f1">1</span> Agent state
+            </button>
+            <button type="button" class="factor-tab js-factor-tab" data-factor="2">
+              <span class="fbadge f2">2</span> Non-agent change
+            </button>
+            <button type="button" class="factor-tab js-factor-tab" data-factor="3">
+              <span class="fbadge f3">3</span> Static background
+            </button>
+            <button type="button" class="factor-tab js-factor-tab" data-factor="4">
+              <span class="fbadge f4">4</span> Agent appearance
+            </button>
+          </div>
+
+          <div id="factor-all">
+            <img class="problem-figure" src="assets/fig1-problem.png" alt="Figure 1: the agent's state, non-agent change, static background and persistent agent appearance in one robot transition" loading="lazy">
+            <p class="figure-caption factor-caption">
+              Between \(o_t\) and \(o_{t+k}\), the arm's physical pose changes (<span class="fbadge f1">1</span>), while its surface material persists (<span class="fbadge f4">4</span>), arm motion reveals previously occluded objects (<span class="fbadge f2">2</span>), and static scene content stays unchanged (<span class="fbadge f3">3</span>).
+            </p>
+          </div>
+
+          <div id="factor-clips" hidden>
+            <div class="factor-videos">
+              <div class="factor-vid-col">
+                <span class="factor-vid-label">Robot clip</span>
+                <video id="factor-orig-vid" muted playsinline preload="none" poster="assets/factor-0.jpg" src="assets/factor-0.mp4"></video>
+              </div>
+              <div class="factor-vid-col">
+                <span class="factor-vid-label" id="factor-high-label">&#9312; Agent state</span>
+                <video id="factor-high-vid" muted playsinline preload="none" poster="assets/factor-1.jpg" src="assets/factor-1.mp4"></video>
+              </div>
+            </div>
+            <p class="factor-insight" id="factor-text">The arm's physical pose changes with its action: the change a latent action should explain.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Method Section -->
+    <section id="method" class="section alt">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Method</span>
+          <h2 class="section-title">Agent-State LAM &amp; Spatially Matched Temporal Discrimination</h2>
+          <p class="section-lead">
+            Agent-State LAM jointly trains a state encoder and inverse and forward dynamics models on unlabeled video. Both dynamics models operate on a <strong>compact agent state</strong>, whose content is shaped by latent-conditioned prediction and SMTD.
+          </p>
+        </div>
+
+        <!-- Step 1: Figure 2a beside its explanation -->
+        <div class="method-block method-split">
+          <figure class="method-panel method-panel-a">
+            <img src="assets/fig2a-dynamics.png" alt="Figure 2a: a shared encoder of backbone and attention pooling maps two frames to compact states; the inverse model infers the latent action and the forward model predicts the later state against an EMA target." loading="lazy">
+          </figure>
+          <div class="method-text">
+            <span class="method-step">Step 1 · Figure 2a</span>
+            <h3>A compact agent state for both dynamics models</h3>
+            <p>
+              The shared encoder \(E_\theta = R_\theta \circ B_\theta\) runs a visual backbone \(B_\theta\), and an attention-pooling map \(R_\theta\) aggregates its \(N\) spatial features of width \(c\) into one compact state \(s_t \in \mathbb{R}^d\) with \(d \ll Nc\): \(d = 384\) vs. \(Nc = 12{,}288\) on DCS, and \(768\) vs. \(196{,}608\) on real robot video.
+            </p>
+            <p>
+              The inverse dynamics model (IDM) \(I_\phi\) infers a latent action from two states \(k\) steps apart, and the forward dynamics model (FDM) \(F_\psi\) uses it to predict the later state, against a target \(\bar{s}_{t+k}\) from an EMA copy of the encoder:
+            </p>
+            <div class="eq-box">
+              $$\begin{gathered} z_{t,k} = Q\big(I_\phi(s_t, s_{t+k})\big) \\ \hat{s}_{t+k} = F_\psi(s_t, z_{t,k}) \end{gathered}$$
+            </div>
+            <div class="method-stat">
+              Sharing one compact state limits how much visual context the representation can retain. On DCS hopper, replacing the compact states with dense features raises action error from <strong>1.14 to 3.46</strong> (Table 3).
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Figure 2b with its explanation -->
+        <div class="method-block">
+          <div class="method-text method-intro">
+            <span class="method-step">Step 2 · Figure 2b</span>
+            <h3>Spatially matched temporal discrimination (SMTD)</h3>
+            <p>
+              Compactness alone does not decide what the state keeps: a state that encodes only static background can stay constant within a video and be copied forward with zero prediction loss. SMTD therefore trains each state \(s_t\) to identify its source frame among nearby frames of the same video.
+            </p>
+          </div>
+          <figure class="method-panel method-panel-b">
+            <img src="assets/fig2b-smtd.png" alt="Figure 2b: the state is compared with the patch features of the source frame and three nearby frames, and a smooth maximum gives each frame's score; illustrative scores on the right for a state that encodes a single factor." loading="lazy">
+          </figure>
+          <div class="method-substeps">
+            <div class="method-substep">
+              <h4>Score each frame by its best local matches</h4>
+              <p>
+                The projected state \(q_t = q(s_t)\) is compared with every frozen DINOv2 patch feature \(f_{u,p}\) of a frame \(o_u\). A smooth maximum over patch locations gives the frame score, so a match counts wherever it appears (solid boxes), not only at its place in \(o_t\) (dashed):
+              </p>
+              <div class="eq-box">
+                $$r_{t,u} = \tau_p \log \sum_{p=1}^{N_p} \exp\!\left(\frac{\cos(q_t, f_{u,p})}{\tau_p}\right)$$
+              </div>
+            </div>
+            <div class="method-substep">
+              <h4>Pick out the source frame</h4>
+              <p>
+                With the source time \(t\) as the positive and nearby times \(u\) of the same video as negatives, SMTD minimizes:
+              </p>
+              <div class="eq-box">
+                $$\mathcal{L}_{\mathrm{SMTD}} = -\mathbb{E}_{\mathcal{V}, t} \log \frac{\exp(r_{t,t}/\tau)}{\sum_{u \in \mathcal{C}_{\mathcal{V}}(t)} \exp(r_{t,u}/\tau)}$$
+              </div>
+            </div>
+            <div class="method-substep">
+              <h4>Why shared context does not help</h4>
+              <p>
+                The scores on the right of the figure are illustrative, for a state that encodes a single factor. Static background <span class="fbadge f3">3</span> and persistent appearance <span class="fbadge f4">4</span> are matched in every frame, and the pepper <span class="fbadge f2">2</span>, hidden by the arm in \(o_t\), only in \(o_{u'}\) and \(o_{u''}\): none scores the source higher, so the loss stays high. The agent's state <span class="fbadge f1">1</span> is matched best at the source pose, which gives a low loss.
+              </p>
+            </div>
+          </div>
+          <div class="method-stat">
+            The gray maps in the figure use the gripper's frozen feature from \(o_t\) in place of the projected state; darker is more similar. On DCS hopper, matching across locations roughly halves the measured change of distractor patches, leaving it below the agent's change in <strong>nine of ten</strong> trajectories.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- World Model Section -->
+    <section id="world-model" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Downstream World Modeling</span>
+          <h2 class="section-title">Conditioning Frozen Video World Models from Decoded Latent Actions</h2>
+          <p class="section-lead">
+            A linear ridge decoder maps each model's quantized latents \(z_q\) to native robot commands that condition frozen <strong>Cosmos-Predict2 (2B)</strong> on IRASim and <strong>Cosmos 3 Edge (4B)</strong> on Bridge V2 and RT-1—with no text prompt and identical initial frames and seeds.
+          </p>
+        </div>
+
+        <!-- Cross-context motion transfer, Figure 5a -->
+        <div class="showcase-card">
+          <div class="showcase-topbar">
+            <div class="showcase-heading">
+              <span class="badge-eyebrow">Motion transfer</span>
+              <h3>Cross-Context Motion Transfer Driving Frozen Cosmos-Predict2 (IRASim)</h3>
+            </div>
+            <div class="showcase-controls">
+              <span class="init-frame-pill">
+                <img src="assets/transfer-initial.jpg" alt="Initial frame of video B">
+                Video B · Initial Frame
+              </span>
+              <button type="button" class="ctrl-btn" id="transfer-toggle">Pause</button>
+              <button type="button" class="ctrl-btn" id="transfer-replay">Replay</button>
+            </div>
+          </div>
+
+          <div class="transfer-grid">
+            <div class="video-tile is-source">
+              <div class="tile-header">
+                <span class="tile-title">Video A · Source Motion</span>
+                <span class="tile-tag">Reference</span>
+              </div>
+              <div class="video-frame">
+                <video class="js-transfer-vid" muted playsinline preload="auto" poster="assets/transfer-source-poster.jpg" src="assets/transfer-source.mp4"></video>
+              </div>
+              <p class="tile-caption">Unlabeled source clip: the arm moves onto the pot.</p>
+            </div>
+
+            <div class="video-tile">
+              <div class="tile-header">
+                <span class="tile-title">UniVLA (fine-tuned)</span>
+                <span class="tile-tag">Baseline</span>
+              </div>
+              <div class="video-frame">
+                <video class="js-transfer-vid" muted playsinline preload="auto" poster="assets/transfer-univla-poster.jpg" src="assets/transfer-univla.mp4"></video>
+              </div>
+              <p class="tile-caption">The generated arm stays over the towel.</p>
+            </div>
+
+            <div class="video-tile">
+              <div class="tile-header">
+                <span class="tile-title">UniVLA + CoMo</span>
+                <span class="tile-tag">Baseline</span>
+              </div>
+              <div class="video-frame">
+                <video class="js-transfer-vid" muted playsinline preload="auto" poster="assets/transfer-como-poster.jpg" src="assets/transfer-como.mp4"></video>
+              </div>
+              <p class="tile-caption">The generated arm also stays over the towel.</p>
+            </div>
+
+            <div class="video-tile is-asl">
+              <div class="tile-header">
+                <span class="tile-title">+ Agent-State LAM</span>
+                <span class="tile-tag">Proposed</span>
+              </div>
+              <div class="video-frame">
+                <video class="js-transfer-vid" muted playsinline preload="auto" poster="assets/transfer-agent-state-lam-poster.jpg" src="assets/transfer-agent-state-lam.mp4"></video>
+              </div>
+              <p class="tile-caption">The generated arm moves onto the pot, as in Video A.</p>
+            </div>
+          </div>
+
+          <p class="showcase-footnote">
+            Latent actions inferred from Video A are mapped to robot commands by a linear decoder fitted on training data, and the commands drive frozen 2B <strong>Cosmos-Predict2</strong> from the initial frame of Video B (same generator and random seed in every row).
+          </p>
+        </div>
+
+        <p class="result-note wm-result-note">On the test clips, Agent-State LAM gives the highest PSNR of all latent action models on IRASim, Bridge V2 and RT-1, and the highest WorldArena trajectory accuracy of the tracked arm on IRASim and Bridge V2 (<a href="https://arxiv.org/pdf/2611.32017" target="_blank" rel="noopener">Table 5 of the paper</a>).</p>
+
+        <!-- Interactive 8-Model Rollout Viewer -->
+        <div class="card rollout-viewer" style="margin-bottom: 24px;">
+          <div class="bench-controls" style="margin-bottom: 12px;">
+            <div>
+              <h3 class="card-title" style="margin-bottom: 2px;">Same-Clip Rollouts: All Eight Conditionings Side by Side</h3>
+              <p class="card-subtitle" style="margin-bottom: 0;">Same initial frame, frozen generator and random seed for every model; only the conditioning commands differ.</p>
+            </div>
+            <div class="pill-tabs" id="rollout-clip-tabs">
+              <button type="button" class="pill-tab is-active" data-clip="irasim_318">IRASim · Cosmos-Predict2</button>
+              <button type="button" class="pill-tab" data-clip="bridge_352">Bridge · Cosmos 3</button>
+              <button type="button" class="pill-tab" data-clip="rt1_18">RT-1 · Cosmos 3</button>
+            </div>
+          </div>
+
+          <div class="rollout-toolbar" id="rollout-toolbar" hidden>
+            <button type="button" class="ctrl-btn" id="rollout-play">Pause</button>
+            <button type="button" class="ctrl-btn" id="rollout-replay">Replay</button>
+          </div>
+
+          <div class="rollout-grid" id="rollout-grid"></div>
+          <p class="figure-caption" id="rollout-caption"></p>
+        </div>
+
+        <!-- Cross-Context Transfer Examples (figures) -->
+        <div class="card filmstrip-viewer">
+          <div class="bench-controls" style="margin-bottom: 8px;">
+            <div>
+              <h3 class="card-title" style="margin-bottom: 2px;">More Cross-Context Motion-Transfer Examples</h3>
+              <p class="card-subtitle" style="margin-bottom: 0;">Commands decoded from video A drive the generator from the first frame of video B (Figures S3 and S4).</p>
+            </div>
+            <div class="pill-tabs" data-tab-group="wm-qual">
+              <button type="button" class="pill-tab is-active" data-tab-target="wmq-1">Example 1 · Reach the cloth</button>
+              <button type="button" class="pill-tab" data-tab-target="wmq-2">Example 2 · Sweep right</button>
+            </div>
+          </div>
+
+          <div id="wmq-1" data-tab-panel="wm-qual" class="filmstrip-Stage">
+            <div class="transfer-grid js-transfer-example" data-example="ex1" hidden></div>
+            <img class="js-transfer-figure" src="assets/supp-wm-transfer-1.jpg" alt="Figure S3: cross-context motion transfer, example 1 on IRASim" loading="lazy">
+            <p class="figure-caption" style="text-align:center;">
+              Video A's arm moves down onto the orange cloth. Only Agent-State LAM reproduces this downward reach in scene B; the baselines stop short.
+            </p>
+          </div>
+          <div id="wmq-2" data-tab-panel="wm-qual" class="filmstrip-Stage hidden">
+            <div class="transfer-grid js-transfer-example" data-example="ex2" hidden></div>
+            <img class="js-transfer-figure" src="assets/supp-wm-transfer-2.jpg" alt="Figure S4: cross-context motion transfer, example 2 on IRASim" loading="lazy">
+            <p class="figure-caption" style="text-align:center;">
+              Video A sweeps right across the table. Only Agent-State LAM reproduces the rightward sweep in scene B; the baselines stay near the corn on the left.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quantitative Benchmarks Section -->
+    <section id="benchmarks" class="section alt">
+      <div class="container">
+        <div class="bench-controls" style="margin-bottom: 28px;">
+          <div class="section-header" style="margin-bottom: 0;">
+            <span class="section-kicker">Experimental Results</span>
+            <h2 class="section-title" style="margin-bottom: 6px;">Action Recovery &amp; Control</h2>
+            <p class="section-lead">Evaluated under shared architectures and identical training budgets across six real robot datasets and four Distracting Control Suite tasks.</p>
+          </div>
+          <div class="pill-tabs" data-tab-group="bench-suites">
+            <button type="button" class="pill-tab is-active" data-tab-target="suite-robot">Real Robot Videos (6 Datasets)</button>
+            <button type="button" class="pill-tab" data-tab-target="suite-dcs">Distracting Control Suite</button>
+          </div>
+        </div>
+
+        <!-- Suite 1: Real Robot Videos -->
+        <div id="suite-robot" data-tab-panel="bench-suites">
+          <div class="card" style="margin-bottom: 20px;">
+            <div class="bench-controls">
+              <div>
+                <h3 class="card-title" style="margin-bottom: 2px;">Normalized Action-Probe Test Error (&darr; Lower is Better)</h3>
+                <p class="card-subtitle" style="margin-bottom: 0;">Linear ridge probes predicting held-out end-effector translation from quantized (\(z_q\)) or continuous (\(z\)) latents.</p>
+              </div>
+              <div class="pill-tabs">
+                <button type="button" class="pill-tab js-latent-btn is-active" data-latent="zq">Quantized Latent (\(z_q\))</button>
+                <button type="button" class="pill-tab js-latent-btn" data-latent="z">Continuous Latent (\(z\))</button>
+              </div>
+            </div>
+            <div class="bar-grid" id="rv-bar-grid"></div>
+
+            <p class="figure-caption">Fine-tuned UniVLA and its variants; the released models and the true-action reference are in Table 4 of the paper.</p>
+          </div>
+        </div>
+
+        <!-- Suite 2: Distracting Control Suite -->
+        <div id="suite-dcs" data-tab-panel="bench-suites" class="hidden">
+          <div class="card">
+            <div class="bench-controls">
+              <div>
+                <h3 class="card-title" style="margin-bottom: 2px;">Action Recovery &amp; Control in DCS</h3>
+                <p class="card-subtitle" style="margin-bottom: 0;" id="dcs-stage-subtitle">Action error (&darr; lower is better): test error of a linear probe mapping the latent actions to the true actions.</p>
+              </div>
+              <div class="pill-tabs">
+                <button type="button" class="pill-tab js-dcs-stage is-active" data-stage="s1">Stage 1 · Latent actions</button>
+                <button type="button" class="pill-tab js-dcs-stage" data-stage="s2">Stage 2 · Behavior cloning</button>
+                <button type="button" class="pill-tab js-dcs-stage" data-stage="s3">Stage 3 · Action decoding</button>
+              </div>
+            </div>
+            <div class="bar-grid is-four" id="dcs-bar-grid"></div>
+
+            <p class="figure-caption">Natural DAVIS video backgrounds with camera and color perturbations; all methods share LAOM's 10-epoch budget and evaluation protocol. LAOM and its variants, MaskLAM and Agent-State LAM; LAPO and the references trained with action labels are in Table 1 of the paper.</p>
+            <p class="result-note">Among latent action models trained without action labels, Agent-State LAM has the lowest action error on all four tasks and the highest return in both control stages (<a href="https://arxiv.org/pdf/2611.32017" target="_blank" rel="noopener">Table 1 of the paper</a>).</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- State & Pose Retrieval Section -->
+    <section id="retrieval" class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-kicker">Representation Geometry</span>
+          <h2 class="section-title">Pose Retrieval Across Visual Contexts</h2>
+          <p class="section-lead">Does cosine similarity in the learned state retrieve frames with the same physical pose across episodes, backgrounds and agent appearances?</p>
+        </div>
+
+        <!-- DCS Retrieval: the source clip and each model's nearest gallery frame at every step, in sync -->
+        <div id="ret-dcs" class="card pose-gallery-card">
+          <div class="bench-controls" style="margin-bottom: 8px;">
+            <div>
+              <h3 class="card-title" style="margin-bottom: 2px;">Cross-Context Pose Retrieval on DCS</h3>
+              <p class="card-subtitle" style="margin-bottom: 0;">At every step of the source clip, each model retrieves its nearest frame, by cosine similarity between visual representations, from two galleries of other trajectories (A and B) rendered with the change named in the tab.</p>
+            </div>
+            <div class="pill-tabs">
+              <button type="button" class="pill-tab js-pose-btn is-active" data-pose-task="hopper">Hopper · New Scene</button>
+              <button type="button" class="pill-tab js-pose-btn" data-pose-task="walker">Walker · Scene + Color</button>
+              <button type="button" class="pill-tab js-pose-btn" data-pose-task="cheetah">Cheetah · Scene + Thickness</button>
+            </div>
+          </div>
+
+          <div class="pose-toolbar">
+            <button type="button" class="ctrl-btn" id="pose-play">Pause</button>
+            <button type="button" class="ctrl-btn" id="pose-replay">Replay</button>
+          </div>
+
+          <div class="dcs-pose-layout">
+            <div class="pose-col">
+              <span class="pose-col-label">Source</span>
+              <figure class="pose-tile">
+                <video id="dcs-pose-source" muted playsinline preload="auto" poster="assets/retrieval/hopper/source.jpg" src="assets/retrieval/hopper/source.mp4" aria-label="Source clip"></video>
+                <figcaption>training appearance</figcaption>
+              </figure>
+            </div>
+            <div class="pose-col">
+              <span class="pose-col-label">LAOM</span>
+              <div class="pose-pair">
+                <figure class="pose-tile">
+                  <video id="dcs-pose-laom_a" muted playsinline preload="auto" poster="assets/retrieval/hopper/laom_a.jpg" src="assets/retrieval/hopper/laom_a.mp4" aria-label="LAOM, nearest frames in gallery A"></video>
+                  <figcaption>gallery A</figcaption>
+                </figure>
+                <figure class="pose-tile">
+                  <video id="dcs-pose-laom_b" muted playsinline preload="auto" poster="assets/retrieval/hopper/laom_b.jpg" src="assets/retrieval/hopper/laom_b.mp4" aria-label="LAOM, nearest frames in gallery B"></video>
+                  <figcaption>gallery B</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="pose-col is-asl">
+              <span class="pose-col-label">Agent-State LAM</span>
+              <div class="pose-pair">
+                <figure class="pose-tile">
+                  <video id="dcs-pose-asl_a" muted playsinline preload="auto" poster="assets/retrieval/hopper/asl_a.jpg" src="assets/retrieval/hopper/asl_a.mp4" aria-label="Agent-State LAM, nearest frames in gallery A"></video>
+                  <figcaption>gallery A</figcaption>
+                </figure>
+                <figure class="pose-tile">
+                  <video id="dcs-pose-asl_b" muted playsinline preload="auto" poster="assets/retrieval/hopper/asl_b.jpg" src="assets/retrieval/hopper/asl_b.mp4" aria-label="Agent-State LAM, nearest frames in gallery B"></video>
+                  <figcaption>gallery B</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <p class="figure-caption">Source trajectories and galleries are those of Figure 3, shown here at every second step, in slow motion. Agent-State LAM has the highest pose retrieval rate in all three settings (R@1 in <a href="https://arxiv.org/pdf/2611.32017" target="_blank" rel="noopener">Table 2 of the paper</a>).</p>
+        </div>
+
+        <!-- Real robot video: per dataset, the supplementary figure's query episode and, at every frame, the frame each model retrieves -->
+        <div id="ret-rv" class="card pose-gallery-card">
+          <div class="bench-controls" style="margin-bottom: 8px;">
+            <div>
+              <h3 class="card-title" style="margin-bottom: 2px;">Arm-State Retrieval on Real Robot Video</h3>
+              <p class="card-subtitle" style="margin-bottom: 0;">At every frame of the source episode, each model retrieves its nearest frame from another episode among 8,000 held-out frames, by cosine similarity of its per-frame vector.</p>
+            </div>
+            <div class="pill-tabs" id="rv-tabs">
+              <button type="button" class="pill-tab is-active" data-rv="bridge">Bridge</button>
+              <button type="button" class="pill-tab" data-rv="rt1">RT-1</button>
+              <button type="button" class="pill-tab" data-rv="ur5">UR5</button>
+              <button type="button" class="pill-tab" data-rv="irasim">IRASim</button>
+              <button type="button" class="pill-tab" data-rv="jaco">Jaco</button>
+              <button type="button" class="pill-tab" data-rv="taco">Taco</button>
+            </div>
+          </div>
+          <div class="pose-toolbar">
+            <button type="button" class="ctrl-btn" id="rv-play">Pause</button>
+            <button type="button" class="ctrl-btn" id="rv-replay">Replay</button>
+          </div>
+
+          <div class="rv-video-layout">
+            <div class="pose-col">
+              <span class="pose-col-label">Source</span>
+              <figure class="pose-tile">
+                <video id="rv-vid-source" muted playsinline preload="auto" poster="assets/rv_retrieval/bridge/source.jpg" src="assets/rv_retrieval/bridge/source.mp4" aria-label="Source episode"></video>
+                <figcaption>held-out episode</figcaption>
+              </figure>
+            </div>
+            <div class="pose-col">
+              <span class="pose-col-label">UniVLA, fine-tuned</span>
+              <figure class="pose-tile">
+                <video id="rv-vid-host" muted playsinline preload="auto" poster="assets/rv_retrieval/bridge/host.jpg" src="assets/rv_retrieval/bridge/host.mp4" aria-label="UniVLA, fine-tuned: nearest frames of other episodes"></video>
+                <figcaption>nearest frame of another episode</figcaption>
+              </figure>
+            </div>
+            <div class="pose-col is-asl">
+              <span class="pose-col-label">Agent-State LAM</span>
+              <figure class="pose-tile">
+                <video id="rv-vid-asl" muted playsinline preload="auto" poster="assets/rv_retrieval/bridge/asl.jpg" src="assets/rv_retrieval/bridge/asl.mp4" aria-label="Agent-State LAM: nearest frames of other episodes"></video>
+                <figcaption>nearest frame of another episode</figcaption>
+              </figure>
+            </div>
+          </div>
+          <p class="figure-caption">The source episodes are those of the supplementary figure, shown frame by frame. Agent-State LAM has the highest arm-state retrieval rate on all six datasets (R@1 in the supplementary table of the <a href="https://arxiv.org/pdf/2611.32017" target="_blank" rel="noopener">paper</a>).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BibTeX Citation Section -->
+    <section id="citation" class="section alt" style="border-bottom: 0;">
+      <div class="container">
+        <div class="section-header" style="margin-bottom: 20px;">
+          <span class="section-kicker">Citation</span>
+          <h2 class="section-title" style="margin-bottom: 6px;">BibTeX</h2>
+        </div>
+        <div class="bibtex-wrap">
+          <button type="button" class="copy-btn" id="copy-bibtex">Copy BibTeX</button>
+<pre id="bibtex-code">@article{xie2026agentstate,
+  title   = {Learning Agent States for Latent Action Modeling},
+  author  = {Xie, Shaoan and Feng, Fan and Zhu, Peiyuan and Spirtes, Peter and Zhang, Kun},
+  journal = {arXiv preprint arXiv:2611.32017},
+  year    = {2026},
+  url     = {https://agent-state-lam.github.io}
+}</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span><strong>Agent-State LAM</strong> &middot; Carnegie Mellon University, UC San Diego &amp; MBZUAI</span>
+      <span>
+        <a href="https://arxiv.org/abs/2611.32017" target="_blank" rel="noopener">arXiv</a> &ensp;&middot;&ensp;
+        <a href="https://github.com/Mid-Push/Agent-State-LAM" target="_blank" rel="noopener noreferrer">GitHub</a> &ensp;&middot;&ensp;
+        <a href="https://huggingface.co/Shaoan/Agent-State-LAM" target="_blank" rel="noopener noreferrer">Hugging Face</a> &ensp;&middot;&ensp;
+        <a href="#top">Back to top &uarr;</a>
+      </span>
+    </div>
+  </footer>
+
+</body>
+</html>

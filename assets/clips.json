@@ -1,0 +1,11 @@
+{
+  "rollouts": [
+    "irasim_318",
+    "bridge_352",
+    "rt1_18"
+  ],
+  "transfer_examples": [
+    "ex1",
+    "ex2"
+  ]
+}
